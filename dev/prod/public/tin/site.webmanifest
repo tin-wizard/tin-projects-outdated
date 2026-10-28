@@ -1,0 +1,12 @@
+{
+  "name": "TIN Projects",
+  "short_name": "TIN Projects",
+  "description": "Plan. Collaborate. Deliver.",
+  "display": "standalone",
+  "icons": [
+    { "src": "/tin/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/tin/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ],
+  "start_url": "/",
+  "scope": "/"
+}
