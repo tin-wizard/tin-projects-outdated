@@ -34,8 +34,9 @@ All app images are built from `tin/main` (upstream `develop` + TIN branding) and
 `ghcr.io/tin-wizard/tin-projects-<service>:<TIN_VERSION>`. Only `kvs` (a separate upstream Rust repo,
 no branding) and the third-party images (PostgreSQL, Redpanda, MinIO, Elasticsearch, nginx, Caddy) are upstream.
 
-- **CI (for servers):** GitHub → Actions → "TIN images" → Run workflow with a version, e.g. `dev-f292d16-tin.2`.
-  Builds `linux/amd64` and pushes to GHCR. Manual-only on purpose: upstream's `main.yml` triggers on `v*` tags.
+- **CI (for servers):** `git tag tin/dev-f292d16-tin.2 && git push origin tin/dev-f292d16-tin.2` runs "TIN images",
+  which builds `linux/amd64` and pushes `…:dev-f292d16-tin.2` to GHCR. Use `tin/*` tags only: upstream's `main.yml`
+  triggers on `v*`/`s*` tags. (The manual "Run workflow" button needs this file on the default branch, `develop`.)
 - **Local:** `TIN_VERSION=dev-f292d16-tin.2 tin/selfhost/build-images.sh` (Node 22; ~30–60 min cold, host architecture).
 
 Set the same `TIN_VERSION` in `env/staging.env` / `env/production.env`.

@@ -1,12 +1,15 @@
 # TIN Projects: build our white-labelled images and push them to GHCR.
-# Manual only: git tags matching v* would also trigger upstream's main.yml in this fork.
+# Release: push a tag `tin/<version>` (e.g. tin/dev-f292d16-tin.1); the image tag is <version>.
+# Not v*/s* tags: those also trigger upstream's main.yml. Manual runs only work once this file is on the default branch.
 name: TIN images
 
 on:
+  push:
+    tags: ['tin/*']
   workflow_dispatch:
     inputs:
       version:
-        description: 'Image tag, e.g. v0.7.426-tin.1'
+        description: 'Image tag, e.g. dev-f292d16-tin.1'
         required: true
 
 permissions:
@@ -37,7 +40,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
-        run: tin/selfhost/build-images.sh --push
+        run: TIN_VERSION="${INPUT_VERSION:-${GITHUB_REF_NAME#tin/}}" tin/selfhost/build-images.sh --push
         env:
-          TIN_VERSION: ${{ inputs.version }}
+          INPUT_VERSION: ${{ inputs.version }}
           DOCKER_EXTRA: --platform=linux/amd64
