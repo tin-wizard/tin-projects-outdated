@@ -1,0 +1,167 @@
+# TIN Projects overrides on top of the vendored huly-selfhost compose (upstream/compose.yml).
+# Usage (from tin/selfhost):  ./tin.sh <staging|production> <docker compose args...>
+# Keep upstream/compose.yml unmodified so it can be re-synced from hcengineering/huly-selfhost.
+
+x-node-health: &node-health
+  interval: 15s
+  timeout: 5s
+  retries: 10
+  start_period: 60s
+
+x-needs-db: &needs-db
+  postgres:
+    condition: service_healthy
+
+services:
+  # PostgreSQL instead of upstream's CockroachDB: CockroachDB v24.2 is past end of support and newer releases
+  # need a proprietary licence (key + telemetry). Upstream CI runs its full UI suite on postgres:18.
+  # CR_DB_URL keeps upstream's variable name; it points here (see tin.sh init-secrets).
+  postgres:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=selfhost
+      - POSTGRES_PASSWORD=${CR_USER_PASSWORD}
+      - POSTGRES_DB=huly
+    # Continuous WAL archiving for point-in-time recovery; base backups come from `tin.sh backup`.
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      # Archive lives in the postgres-owned volume; `tin.sh backup` copies it off the server with each base backup.
+      - archive_command=mkdir -p /var/lib/postgresql/wal-archive && test ! -f /var/lib/postgresql/wal-archive/%f && cp %p /var/lib/postgresql/wal-archive/%f
+      - -c
+      - archive_timeout=300
+    volumes:
+      # postgres:18 images keep PGDATA under /var/lib/postgresql/18/docker; mount the parent.
+      - pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U selfhost -d huly"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  cockroach:
+    profiles: [cockroach]
+
+  nginx:
+    # Bind to loopback by default; Caddy (profile "https") or an SSH tunnel is the only way in.
+    ports: !override
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:80"
+    # nginx resolves upstream IPs only at start; tin.sh restarts it after every `up` (else 502 after recreates).
+    depends_on:
+      front:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.10.2
+    profiles: [https]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - HOST_ADDRESS=${HOST_ADDRESS}
+      - ACME_EMAIL=${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+  redpanda:
+    healthcheck:
+      # Upstream's check passes SASL creds, but SASL is not enabled, so it always reports unhealthy.
+      test: ['CMD', 'rpk', 'cluster', 'health', '--exit-when-healthy']
+
+  kvs:
+    # Only the Gmail / mail-worker integrations use kvs (KVS_URL); neither is deployed. It also logs the
+    # full DB URL incl. password and has no TLS (cannot reach managed Postgres). Opt in with COMPOSE_PROFILES=kvs.
+    profiles: [kvs]
+    ports: !reset []
+
+  rekoni:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-rekoni:${TIN_VERSION}
+
+  transactor:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-transactor:${TIN_VERSION}
+    depends_on: *needs-db
+    environment:
+      # Upstream hard-codes http://localhost:8087, which breaks links in notification emails.
+      - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
+      - BRANDING_PATH=/var/cfg/branding.json
+      - MAIL_URL=${MAIL_URL:-}
+    volumes:
+      - ./branding.json:/var/cfg/branding.json:ro
+
+  collaborator:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-collaborator:${TIN_VERSION}
+
+  account:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-account:${TIN_VERSION}
+    depends_on: *needs-db
+    environment:
+      - BRANDING_PATH=/var/cfg/branding.json
+      - PRODUCT_NAME=TIN Projects
+      - MAIL_URL=${MAIL_URL:-}
+      - DISABLE_SIGNUP=${DISABLE_SIGNUP:-false}
+    volumes:
+      - ./branding.json:/var/cfg/branding.json:ro
+    healthcheck:
+      <<: *node-health
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(()=>process.exit(0),()=>process.exit(1))"]
+
+  workspace:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-workspace:${TIN_VERSION}
+    depends_on: *needs-db
+    environment:
+      - BRANDING_PATH=/var/cfg/branding.json
+      # Replaces upstream's Huly-branded sample content; keeps its setup steps (see init/script.yaml).
+      - INIT_REPO_DIR=/var/cfg/init
+    volumes:
+      - ./branding.json:/var/cfg/branding.json:ro
+      - ./init:/var/cfg/init:ro
+
+  front:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-front:${TIN_VERSION}
+    environment:
+      - BRANDING_URL=http${SECURE:+s}://${HOST_ADDRESS}/tin-branding.json
+      - DISABLE_SIGNUP=${DISABLE_SIGNUP:-false}
+    volumes:
+      # Host-keyed branding (title, favicons, languages); served from the front's static dir.
+      - ./branding.json:/app/dist/tin-branding.json:ro
+    healthcheck:
+      <<: *node-health
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/config.json').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+
+  fulltext:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-fulltext:${TIN_VERSION}
+    depends_on: *needs-db
+
+  stats:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-stats:${TIN_VERSION}
+
+  mail:
+    image: ${TIN_REGISTRY:-ghcr.io/tin-wizard}/tin-projects-mail:${TIN_VERSION}
+    profiles: [mail]
+    environment:
+      - PORT=8097
+      - SOURCE=${MAIL_SOURCE:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    restart: unless-stopped
+    networks:
+      - huly_net
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:

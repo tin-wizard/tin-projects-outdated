@@ -1,0 +1,46 @@
+# TIN Projects workspace init: upstream 'huly' steps (hcengineering/init) without the Huly sample-content import.
+- name: 'tin'
+  default: true
+  steps:
+    - type: 'update'
+      _class: 'core:class:PluginConfiguration'
+      data:
+        _id: 'plugin-configuration-calendar'
+        enabled: true
+        space: 'core:space:Model'
+    - type: 'update'
+      _class: 'core:class:PluginConfiguration'
+      data:
+        _id: 'plugin-configuration-recruit'
+        enabled: false
+        space: 'core:space:Model'
+    - type: 'create'
+      _class: 'contact:class:Person'
+      resultVariable: creatorPerson
+      data:
+        space: contact:space:Contacts
+        name: ${creatorName@global}
+        personUuid: ${creatorUuid@global}
+        city: ''
+        avatarType: 'color'
+        avatarProps:
+          color: '#f868bc'
+    - type: 'mixin'
+      _class: 'contact:class:Person'
+      mixin: 'contact:mixin:Employee'
+      data:
+        space: contact:space:Contacts
+        _id: ${creatorPerson}
+        active: true
+    - type: 'create'
+      _class: 'contact:class:SocialIdentity'
+      data:
+        _id: ${creatorSocialId@global}
+        space: 'contact:space:Contacts'
+        collection: 'socialIds'
+        attachedTo: ${creatorPerson}
+        attachedToClass: 'contact:class:Person'
+        key: ${creatorSocialKey@global}
+        type: ${creatorSocialType@global}
+        value: ${creatorSocialValue@global}
+        confirmed: true

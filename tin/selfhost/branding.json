@@ -1,0 +1,74 @@
+{
+  "localhost:8087": {
+    "title": "TIN Projects",
+    "languages": "en",
+    "defaultLanguage": "en",
+    "defaultApplication": "tracker",
+    "defaultSpace": "tracker:project:DefaultProject",
+    "defaultSpecial": "issues",
+    "lastNameFirst": "true",
+    "links": [
+      {
+        "rel": "manifest",
+        "href": "/tin/site.webmanifest"
+      },
+      {
+        "rel": "icon",
+        "href": "/tin/favicon.svg",
+        "type": "image/svg+xml"
+      },
+      {
+        "rel": "apple-touch-icon",
+        "href": "/tin/apple-touch-icon.png"
+      }
+    ]
+  },
+  "staging.projects.tin.info": {
+    "title": "TIN Projects",
+    "languages": "en",
+    "defaultLanguage": "en",
+    "defaultApplication": "tracker",
+    "defaultSpace": "tracker:project:DefaultProject",
+    "defaultSpecial": "issues",
+    "lastNameFirst": "true",
+    "links": [
+      {
+        "rel": "manifest",
+        "href": "/tin/site.webmanifest"
+      },
+      {
+        "rel": "icon",
+        "href": "/tin/favicon.svg",
+        "type": "image/svg+xml"
+      },
+      {
+        "rel": "apple-touch-icon",
+        "href": "/tin/apple-touch-icon.png"
+      }
+    ]
+  },
+  "projects.tin.info": {
+    "title": "TIN Projects",
+    "languages": "en",
+    "defaultLanguage": "en",
+    "defaultApplication": "tracker",
+    "defaultSpace": "tracker:project:DefaultProject",
+    "defaultSpecial": "issues",
+    "lastNameFirst": "true",
+    "links": [
+      {
+        "rel": "manifest",
+        "href": "/tin/site.webmanifest"
+      },
+      {
+        "rel": "icon",
+        "href": "/tin/favicon.svg",
+        "type": "image/svg+xml"
+      },
+      {
+        "rel": "apple-touch-icon",
+        "href": "/tin/apple-touch-icon.png"
+      }
+    ]
+  }
+}
