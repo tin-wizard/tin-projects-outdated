@@ -35,7 +35,12 @@ Only English strings are changed; `branding.json` limits the UI to English.
 
 - **License and copyright notices** in source files (EPL-2.0 requires keeping them) and the upstream `LICENSE`.
 - "Huly Unified Format" (export format name), Google API privacy statements (legal text, only shown if Google integrations are configured), Huly Mail and billing strings (features not deployed).
-- Help menu: "Contact us" opens Huly's community Slack and "Open documentation" opens docs.huly.io (`plugins/support/src/index.ts`). **Decision needed:** point these at a TIN support channel/wiki, or keep them.
+- Help menu links still point at Huly: Privacy Policy → `v1.huly.io/legal/privacy`, Report a Bug → upstream GitHub
+  issues, Contact us → Huly Slack, Documentation → docs.huly.io. **TIN URLs needed.** No code change: add per host in
+  `tin/selfhost/branding.json`:
+  `"support": { "privacyPolicyLink": "…", "reportBugLink": "…", "supportLink": "…", "docsLink": "…" }`
+- Settings → Integrations lists Calendar, Telegram, Gmail and GitHub as "Available" although those services are not
+  deployed (upstream selfhost behaves the same); connecting them fails.
 - Internal identifiers (`huly.*` storage keys, branding key `huly`, package names, CSS variables): not user-facing; renaming them would break upgrades.
 
 ## 4. Replacing the placeholder assets
